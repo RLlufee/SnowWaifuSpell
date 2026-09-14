@@ -1,42 +1,41 @@
 package com.rinko1231.SnowWaifuSpell.config;
 
 
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class SnowWaifuConfig {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static ModConfigSpec SPEC;
 
     // ===== 基础血量参数 =====
-    public static ForgeConfigSpec.DoubleValue BASE_HP_A;
-    public static ForgeConfigSpec.DoubleValue BASE_HP_B;
+    public static ModConfigSpec.DoubleValue BASE_HP_A;
+    public static ModConfigSpec.DoubleValue BASE_HP_B;
 
     // ===== 冰雾伤害参数 =====
-    public static ForgeConfigSpec.DoubleValue BREATH_DMG_A;
-    public static ForgeConfigSpec.DoubleValue BREATH_DMG_B;
+    public static ModConfigSpec.DoubleValue BREATH_DMG_A;
+    public static ModConfigSpec.DoubleValue BREATH_DMG_B;
 
     // ===== 射线伤害参数 =====
-    public static ForgeConfigSpec.DoubleValue RAY_DMG_A;
-    public static ForgeConfigSpec.DoubleValue RAY_DMG_B;
+    public static ModConfigSpec.DoubleValue RAY_DMG_A;
+    public static ModConfigSpec.DoubleValue RAY_DMG_B;
 
     // ===== 冰锥伤害参数 =====
-    public static ForgeConfigSpec.DoubleValue icicle_DMG_A;
-    public static ForgeConfigSpec.DoubleValue icicle_DMG_B;
+    public static ModConfigSpec.DoubleValue icicle_DMG_A;
+    public static ModConfigSpec.DoubleValue icicle_DMG_B;
 
     // ===== 持续时间参数（秒） =====
-    public static ForgeConfigSpec.IntValue DURATION_A;
-    public static ForgeConfigSpec.IntValue DURATION_B;
+    public static ModConfigSpec.IntValue DURATION_A;
+    public static ModConfigSpec.IntValue DURATION_B;
 
-    public static ForgeConfigSpec.BooleanValue snowQueenLootDrop;
-    public static ForgeConfigSpec.BooleanValue snowWaifuForever;
+    public static ModConfigSpec.BooleanValue snowQueenLootDrop;
+    public static ModConfigSpec.BooleanValue snowWaifuForever;
 
-    public static ForgeConfigSpec.IntValue icicleInterval;
-    public static ForgeConfigSpec.IntValue breathConeDuration;
-    public static ForgeConfigSpec.IntValue breathConeInterval;
-    public static ForgeConfigSpec.IntValue iceRayInterval;
+    public static ModConfigSpec.IntValue icicleInterval;
+    public static ModConfigSpec.IntValue snowBallInterval;
+    public static ModConfigSpec.IntValue breathConeDuration;
+    public static ModConfigSpec.IntValue breathConeInterval;
+    public static ModConfigSpec.IntValue iceRayInterval;
 
     static {
 
@@ -67,8 +66,8 @@ public class SnowWaifuConfig {
                 .comment("Ray damage intercept (b) for Damage = a*level + b")
                 .defineInRange("rayDamage.b", 2.5, -Integer.MAX_VALUE, Integer.MAX_VALUE);
 
-        // ===== 射线伤害：y = a*x + b =====
-        icicle_DMG_A= BUILDER
+        // ===== 冰锥伤害：y = a*x + b =====
+        icicle_DMG_A = BUILDER
                 .comment("icicle damage slope (a) for Damage = a*level + b")
                 .defineInRange("icicleDamage.a", 2.5, -Integer.MAX_VALUE, Integer.MAX_VALUE);
         icicle_DMG_B = BUILDER
@@ -85,27 +84,28 @@ public class SnowWaifuConfig {
 
         snowQueenLootDrop = BUILDER
                 .comment("Should Snow Queen Boss Drop the Soul")
-                        .define("snowQueenLootDrop", true);
+                .define("snowQueenLootDrop", true);
         snowWaifuForever = BUILDER
                 .comment("Should Snow Waifu exists forever")
                 .define("snowWaifuForever", false);
 
         icicleInterval = BUILDER
-                .defineInRange("icicleInterval", 40 ,1, Integer.MAX_VALUE);
+                .comment("Interval between icicle casts in ticks")
+                .defineInRange("icicleInterval", 40, 1, Integer.MAX_VALUE);
+        snowBallInterval = icicleInterval;
+
         breathConeDuration = BUILDER
-                .defineInRange("breathConeDuration", 60 ,1, Integer.MAX_VALUE);
+                .defineInRange("breathConeDuration", 60, 1, Integer.MAX_VALUE);
         breathConeInterval = BUILDER
-                .defineInRange("breathConeInterval", 60 ,1, Integer.MAX_VALUE);
+                .defineInRange("breathConeInterval", 60, 1, Integer.MAX_VALUE);
         iceRayInterval = BUILDER
-                .defineInRange("iceRayInterval", 160 ,1, Integer.MAX_VALUE);
+                .defineInRange("iceRayInterval", 160, 1, Integer.MAX_VALUE);
 
         BUILDER.pop();
 
         SPEC = BUILDER.build();
     }
-    public static void setup() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC, "SnowWaifuSpellConfig.toml");
-    }
+
 
     public static double getBaseHP(int level) {
         return BASE_HP_A.get() * level + BASE_HP_B.get();

@@ -30,10 +30,11 @@ public abstract class TamableMob extends PathfinderMob implements OwnableEntity 
     }
 
 
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_FLAGS_ID, (byte) 0);
-        this.entityData.define(DATA_OWNER_UUID_ID, Optional.empty());
+
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_FLAGS_ID, (byte) 0);
+        builder.define(DATA_OWNER_UUID_ID, Optional.empty());
     }
 
     public void addAdditionalSaveData(CompoundTag p_21819_) {

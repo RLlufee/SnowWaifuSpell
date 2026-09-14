@@ -2,23 +2,22 @@ package com.rinko1231.SnowWaifuSpell.spells;
 
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
 import com.rinko1231.SnowWaifuSpell.entity.SummonedSnowQueen;
-import com.rinko1231.SnowWaifuSpell.init.EffectRegistry;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
-
+import io.redspace.ironsspellbooks.api.events.SpellSummonEvent;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
-import io.redspace.ironsspellbooks.registries.MobEffectRegistry;
+import io.redspace.ironsspellbooks.capabilities.magic.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.NeoForge;
 
-
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -26,7 +25,7 @@ import static com.rinko1231.SnowWaifuSpell.SnowWaifuSpell.MOD_ID;
 
 @AutoSpellConfig
 public class SummonSnowQueenSpell extends AbstractSpell {
-    private final ResourceLocation spellId = ResourceLocation.tryBuild(MOD_ID, "summon_snow_queen");
+    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(MOD_ID, "summon_snow_queen");
     private final DefaultConfig defaultConfig;
 
     public SummonSnowQueenSpell() {
@@ -63,14 +62,32 @@ public class SummonSnowQueenSpell extends AbstractSpell {
         return Optional.of(SoundEvents.EVOKER_PREPARE_SUMMON);
     }
 
+    @Override
+    public int getRecastCount(int spellLevel, @Nullable LivingEntity entity) {
+        return 2;
+    }
+
     public boolean allowLooting() {
         return false;
     }
 
+    @Override
+    public void onRecastFinished(ServerPlayer serverPlayer, RecastInstance recastInstance, RecastResult recastResult, ICastDataSerializable castDataSerializable) {
+        if (SummonManager.recastFinishedHelper(serverPlayer, recastInstance, recastResult, castDataSerializable)) {
+            super.onRecastFinished(serverPlayer, recastInstance, recastResult, castDataSerializable);
+        }
+    }
+
+    @Override
+    public ICastDataSerializable getEmptyCastData() {
+        return new SummonedEntitiesCastData();
+    }
 
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
-
+        PlayerRecasts recasts = playerMagicData.getPlayerRecasts();
+        if (!recasts.hasRecastForSpell(this)) {
+            SummonedEntitiesCastData summonedEntitiesCastData = new SummonedEntitiesCastData();
 
             // 根据等级设置存活时间
             int summonTime;
@@ -91,20 +108,25 @@ public class SummonSnowQueenSpell extends AbstractSpell {
             Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
             Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
 
+            SummonedSnowQueen creature = (SummonedSnowQueen) ((SpellSummonEvent) NeoForge.EVENT_BUS.post(
+                    new SpellSummonEvent(entity, snowQueen, this.spellId, spellLevel)
+            )).getCreature();
 
+            world.addFreshEntity(creature);
+            if (!SnowWaifuConfig.snowWaifuForever.get()) {
+                SummonManager.initSummon(entity, creature, summonTime, summonedEntitiesCastData);
 
-            world.addFreshEntity(snowQueen);
-            if(!SnowWaifuConfig.snowWaifuForever.get())
-        {
-            snowQueen.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, 0, false, false, false));
-            int effectAmplifier = 0;
-            if (entity.hasEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get())) {
-                effectAmplifier += entity.getEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get()).getAmplifier() + 1;
+                RecastInstance recastInstance = new RecastInstance(
+                        this.getSpellId(),
+                        spellLevel,
+                        this.getRecastCount(spellLevel, entity),
+                        summonTime,
+                        castSource,
+                        summonedEntitiesCastData
+                );
+                recasts.addRecast(recastInstance, playerMagicData);
             }
-
-            entity.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, effectAmplifier, false, false, true));
         }
-
 
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
     }

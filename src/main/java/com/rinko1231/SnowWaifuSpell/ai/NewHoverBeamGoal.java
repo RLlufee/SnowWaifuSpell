@@ -92,4 +92,3 @@ public class NewHoverBeamGoal extends HoverBaseGoal<SummonedSnowQueen> {
         this.hoverPosY = baseY + verticalOffset;
     }
 }
-

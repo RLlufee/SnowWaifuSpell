@@ -4,25 +4,22 @@ import com.rinko1231.SnowWaifuSpell.ai.FlyingFollowOwnerGoal;
 import com.rinko1231.SnowWaifuSpell.ai.NewHoverBeamGoal;
 import com.rinko1231.SnowWaifuSpell.ai.NewSitWhenOrderedToGoal;
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
-import com.rinko1231.SnowWaifuSpell.init.EffectRegistry;
 import com.rinko1231.SnowWaifuSpell.init.ModEntityRegistry;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
-
+import io.redspace.ironsspellbooks.capabilities.magic.SummonManager;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
-
-import io.redspace.ironsspellbooks.effect.SummonTimer;
-import io.redspace.ironsspellbooks.entity.mobs.MagicSummon;
+import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
 import com.rinko1231.SnowWaifuSpell.ai.QueenCopyOwnerTargetGoal;
 import com.rinko1231.SnowWaifuSpell.ai.QueenHurtByTargetGoal;
 import com.rinko1231.SnowWaifuSpell.ai.QueenOwnerHurtByTargetGoal;
 import com.rinko1231.SnowWaifuSpell.ai.QueenOwnerHurtTargetGoal;
+import com.rinko1231.SnowWaifuSpell.ai.QueenProtectOwnerTargetGoal;
 import io.redspace.ironsspellbooks.entity.spells.cone_of_cold.ConeOfColdProjectile;
 import io.redspace.ironsspellbooks.entity.spells.icicle.IcicleProjectile;
 import io.redspace.ironsspellbooks.entity.spells.ray_of_frost.RayOfFrostVisualEntity;
-
 import io.redspace.ironsspellbooks.util.ParticleHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -36,8 +33,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -64,9 +59,8 @@ import twilightforest.init.TFSounds;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.UUID;
 
-public class SummonedSnowQueen extends TamableMob implements MagicSummon {
+public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
     private static final EntityDataAccessor<Boolean> BEAM_FLAG;
     private static final EntityDataAccessor<Integer> QUEEN_LEVEL =
             SynchedEntityData.defineId(SummonedSnowQueen.class, EntityDataSerializers.INT);
@@ -78,14 +72,12 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     }
 
 
-    protected LivingEntity cachedSummoner;
-    protected UUID summonerUUID;
+
     private int snowballCooldown = 0;
     private int iceRayCooldown = 0;
 
-
-    public SummonedSnowQueen(EntityType<? extends SummonedSnowQueen> type, Level world) {
-        super(type, world);
+    public SummonedSnowQueen(EntityType<? extends SummonedSnowQueen> type, Level level) {
+        super(type, level);
         this.xpReward = 0;
 
         //this.setNoGravity(true);
@@ -101,13 +93,25 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         this.moveControl = new FlyingMoveControl(this, 10, true);
     }
 
-
     public int getQueenLevel() {
         return this.entityData.get(QUEEN_LEVEL);
     }
 
     public void setQueenLevel(int level) {
         this.entityData.set(QUEEN_LEVEL, level);
+    }
+
+    @Override
+    public LivingEntity getSummoner() {
+        Entity owner = this.getOwner();
+        if (owner instanceof LivingEntity livingOwner) {
+            return livingOwner;
+        }
+        Entity summoner = SummonManager.getOwner(this);
+        if (summoner instanceof LivingEntity livingSummoner) {
+            return livingSummoner;
+        }
+        return null;
     }
 
     @Override
@@ -134,11 +138,10 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
 
     public void setSummoner(@Nullable LivingEntity owner) {
         if (owner != null) {
-            this.summonerUUID = owner.getUUID();
-            this.cachedSummoner = owner;
+            SummonManager.setOwner(this, owner);
         }
-
     }
+
     @Override
     public boolean hurt(@NotNull DamageSource pSource, float pAmount) {
         // 来自自己、主人或同伴盟友的任何伤害（如群体喷雾、冰锥波及）直接完全免疫，防止触发受击反击互殴
@@ -403,14 +406,15 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         this.targetSelector.addGoal(2, new QueenOwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, new QueenCopyOwnerTargetGoal(this));
         this.targetSelector.addGoal(4, (new QueenHurtByTargetGoal(this, (entity) -> entity == this.getSummoner())).setAlertOthers());
+        this.targetSelector.addGoal(5, new QueenProtectOwnerTargetGoal(this));
 
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(BEAM_FLAG, false);
-        this.entityData.define(QUEEN_LEVEL, 1); // 默认1级
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(BEAM_FLAG, false);
+        builder.define(QUEEN_LEVEL, 1); // 默认1级
 
     }
 
@@ -482,7 +486,7 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         this.yBodyRot = this.getYHeadRot();
 
         IcicleProjectile orb = new IcicleProjectile(level, this);
-        getOrb(orb).setOwner(this);
+        orb.setOwner(this);
         orb.setDamage((float) SnowWaifuConfig.getIcicleDamage(this.getQueenLevel()));
         orb.setNoGravity(true);
 
@@ -500,15 +504,6 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         level.addFreshEntity(orb);
     }
 
-    private static IcicleProjectile getOrb(IcicleProjectile orb) {
-        return orb;
-    }
-
-
-    @Override
-    public LivingEntity getSummoner() {
-        return this.getOwner();
-    }
 
     @Override
     public void onUnSummon() {
@@ -563,70 +558,12 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     }
 
     @Override
-    public void onRemovedFromWorld() {
-        safeOnRemovedHelper();
-        super.onRemovedFromWorld();
-    }
-
-    private void safeOnRemovedHelper() {
-        boolean invoked = false;
+    public void onRemovedFromLevel() {
         try {
-            // 通过反射动态匹配当前运行环境的 onRemovedHelper 签名，避免因 ISS 跨版本变更参数导致 NoSuchMethodError
-            for (java.lang.reflect.Method m : this.getClass().getMethods()) {
-                if ("onRemovedHelper".equals(m.getName())) {
-                    Class<?>[] pts = m.getParameterTypes();
-                    if (pts.length == 2 && pts[0].isAssignableFrom(this.getClass())) {
-                        if (pts[1].isInstance(EffectRegistry.SNOW_WAIFU_TIMER)) {
-                            // ISS 3.16+ 签名：onRemovedHelper(Entity, RegistryObject)
-                            m.invoke(this, this, EffectRegistry.SNOW_WAIFU_TIMER);
-                            invoked = true;
-                            break;
-                        } else if (pts[1].isInstance(EffectRegistry.SNOW_WAIFU_TIMER.get())) {
-                            // 旧版 ISS 签名：onRemovedHelper(Entity, SummonTimer)
-                            m.invoke(this, this, EffectRegistry.SNOW_WAIFU_TIMER.get());
-                            invoked = true;
-                            break;
-                        }
-                    } else if (pts.length == 1 && pts[0].isAssignableFrom(this.getClass())) {
-                        // 备用签名：onRemovedHelper(Entity)
-                        m.invoke(this, this);
-                        invoked = true;
-                        break;
-                    }
-                }
-            }
+            this.onRemovedHelper(this);
         } catch (Throwable ignored) {
         }
-
-        // 如果反射未命中或执行失败，执行全原生兜底清理，确保无论如何绝不崩溃
-        if (!invoked) {
-            fallbackOnRemoved();
-        }
-    }
-
-    private void fallbackOnRemoved() {
-        if (this.level().isClientSide) return;
-        Entity.RemovalReason reason = this.getRemovalReason();
-        if (reason != null && reason.shouldDestroy()) {
-            LivingEntity summoner = this.getSummoner();
-            if (summoner instanceof ServerPlayer player) {
-                MobEffect timerEffect = (MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get();
-                if (player.hasEffect(timerEffect)) {
-                    MobEffectInstance current = player.getEffect(timerEffect);
-                    if (current != null) {
-                        int amp = current.getAmplifier();
-                        int dur = current.getDuration();
-                        player.removeEffect(timerEffect);
-                        if (amp > 0) {
-                            player.addEffect(new MobEffectInstance(timerEffect, dur, amp - 1, false, false, true));
-                        }
-                    }
-                }
-                if (reason == Entity.RemovalReason.DISCARDED) {
-                    player.sendSystemMessage(Component.translatable("ui.irons_spellbooks.summon_despawn_message", this.getDisplayName()));
-                }
-            }
-        }
+        super.onRemovedFromLevel();
     }
 
     private void castIceRay() {
@@ -697,8 +634,5 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
                 50, 0, 0, 0, 0.3, false
         );
     }
-
-
-
 }
 

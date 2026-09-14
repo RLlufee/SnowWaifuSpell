@@ -5,13 +5,10 @@ import com.rinko1231.SnowWaifuSpell.entity.SummonedSnowQueen;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 
 @OnlyIn(Dist.CLIENT)
@@ -37,7 +34,6 @@ public class NewSummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> 
         crown.addOrReplaceChild("crown_back", CubeListBuilder.create().texOffs(44, 0).addBox(-5.0F, -4.0F, 0.0F, 10.0F, 4.0F, 0.0F), PartPose.offsetAndRotation(0.0F, -6.0F, 4.0F, (-(float)Math.PI / 8F), 0.0F, 0.0F));
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
-
 
 
     @Override

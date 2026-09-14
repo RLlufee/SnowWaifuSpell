@@ -46,7 +46,6 @@ public class QueenHurtByTargetGoal extends TargetGoal {
             return false;
         }
         // 如果受击来源是主人或盟友，或者自身不想攻击该目标（如另一个雪女同伴），直接忽略，绝不反击
-        // 用卷轴召唤的第二个雪女：666我怎么老被炸啊
         if (this.toIgnoreDamage.test(attacker) || this.mob.isAlliedTo(attacker) || !this.mob.wantsToAttack(attacker, this.mob.getOwner())) {
             return false;
         }

@@ -19,7 +19,7 @@ public class FlyingFollowOwnerGoal extends Goal {
     private Entity owner;
 
     public FlyingFollowOwnerGoal(TamableMob mob, Supplier<Entity> ownerGetter,
-        double speed, float startDist, float stopDist, float teleportDist) {
+                                double speed, float startDist, float stopDist, float teleportDist) {
         this.mob = mob;
         this.ownerGetter = ownerGetter;
         this.speed = speed;
@@ -56,7 +56,7 @@ public class FlyingFollowOwnerGoal extends Goal {
 
         // 计算飞行目标点
         double targetX = owner.getX() + (mob.getRandom().nextDouble() - 0.5) * 2;
-        double targetY = owner.getY() + 1.0; // 保持略高于主人
+        double targetY = owner.getY() + 2.0; // 保持略高于主人
         double targetZ = owner.getZ() + (mob.getRandom().nextDouble() - 0.5) * 2;
 
         this.mob.getNavigation().moveTo(targetX, targetY, targetZ, speed);
