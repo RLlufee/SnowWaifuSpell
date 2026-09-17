@@ -1,3 +1,17 @@
+> 本项目的原作现已经停更，目前官方尚未回应关于是否允许我继续维护的消息
+
+# 当前状态
+
+雪之嫁系列的项目仍旧在维护，目前属于非官方维护状态：
+
+具体详情：
+
+1. 已修复，并完全兼容铁魔法最新版本
+2. 1.1.0版本是已修复完整的版本，后续会新增更多内容，不喜欢新内容可以仍旧使用1.1.0
+
+
+> 以下是原文的README：
+
 # Snow Waifu Spell
 
 Have you ever felt a twinge of regret after defeating the **Snow Queen**—wishing she could accompany you, rather than becoming just another trophy head?  
