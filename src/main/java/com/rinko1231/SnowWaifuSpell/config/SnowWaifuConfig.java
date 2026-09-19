@@ -1,6 +1,5 @@
 package com.rinko1231.SnowWaifuSpell.config;
 
-
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
@@ -37,9 +36,10 @@ public class SnowWaifuConfig {
     public static ForgeConfigSpec.IntValue breathConeDuration;
     public static ForgeConfigSpec.IntValue breathConeInterval;
     public static ForgeConfigSpec.IntValue iceRayInterval;
+    public static ForgeConfigSpec.IntValue frostwaveInterval;
+    public static ForgeConfigSpec.IntValue iceBlockInterval;
 
     static {
-
 
         BUILDER.push("Snow Waifu Config");
 
@@ -52,8 +52,7 @@ public class SnowWaifuConfig {
                 .defineInRange("baseHP.b", -25.0, -Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         // ===== 冰雾伤害：y = a*x + b =====
-        BREATH_DMG_A = BUILDER.
-                comment("Breath(Cone) damage slope (a) for Damage = a*level + b")
+        BREATH_DMG_A = BUILDER.comment("Breath(Cone) damage slope (a) for Damage = a*level + b")
                 .defineInRange("breathDamage.a", 2.5, -Integer.MAX_VALUE, Integer.MAX_VALUE);
         BREATH_DMG_B = BUILDER
                 .comment("Breath(Cone) damage intercept (b) for Damage = a*level + b")
@@ -68,7 +67,7 @@ public class SnowWaifuConfig {
                 .defineInRange("rayDamage.b", 2.5, -Integer.MAX_VALUE, Integer.MAX_VALUE);
 
         // ===== 射线伤害：y = a*x + b =====
-        icicle_DMG_A= BUILDER
+        icicle_DMG_A = BUILDER
                 .comment("icicle damage slope (a) for Damage = a*level + b")
                 .defineInRange("icicleDamage.a", 2.5, -Integer.MAX_VALUE, Integer.MAX_VALUE);
         icicle_DMG_B = BUILDER
@@ -85,24 +84,31 @@ public class SnowWaifuConfig {
 
         snowQueenLootDrop = BUILDER
                 .comment("Should Snow Queen Boss Drop the Soul")
-                        .define("snowQueenLootDrop", true);
+                .define("snowQueenLootDrop", true);
         snowWaifuForever = BUILDER
                 .comment("Should Snow Waifu exists forever")
                 .define("snowWaifuForever", false);
 
         icicleInterval = BUILDER
-                .defineInRange("icicleInterval", 40 ,1, Integer.MAX_VALUE);
+                .defineInRange("icicleInterval", 40, 1, Integer.MAX_VALUE);
         breathConeDuration = BUILDER
-                .defineInRange("breathConeDuration", 60 ,1, Integer.MAX_VALUE);
+                .defineInRange("breathConeDuration", 60, 1, Integer.MAX_VALUE);
         breathConeInterval = BUILDER
-                .defineInRange("breathConeInterval", 60 ,1, Integer.MAX_VALUE);
+                .defineInRange("breathConeInterval", 60, 1, Integer.MAX_VALUE);
         iceRayInterval = BUILDER
-                .defineInRange("iceRayInterval", 160 ,1, Integer.MAX_VALUE);
+                .defineInRange("iceRayInterval", 160, 1, Integer.MAX_VALUE);
+        frostwaveInterval = BUILDER
+                .comment("Frostwave spell cooldown in ticks")
+                .defineInRange("frostwaveInterval", 240, 1, Integer.MAX_VALUE);
+        iceBlockInterval = BUILDER
+                .comment("Ice Block spell cooldown in ticks")
+                .defineInRange("iceBlockInterval", 300, 1, Integer.MAX_VALUE);
 
         BUILDER.pop();
 
         SPEC = BUILDER.build();
     }
+
     public static void setup() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC, "SnowWaifuSpellConfig.toml");
     }
