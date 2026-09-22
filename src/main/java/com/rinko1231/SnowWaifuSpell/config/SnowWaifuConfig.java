@@ -36,6 +36,8 @@ public class SnowWaifuConfig {
     public static ModConfigSpec.IntValue breathConeDuration;
     public static ModConfigSpec.IntValue breathConeInterval;
     public static ModConfigSpec.IntValue iceRayInterval;
+    public static ModConfigSpec.IntValue frostwaveInterval;
+    public static ModConfigSpec.IntValue iceBlockInterval;
 
     static {
 
@@ -100,6 +102,12 @@ public class SnowWaifuConfig {
                 .defineInRange("breathConeInterval", 60, 1, Integer.MAX_VALUE);
         iceRayInterval = BUILDER
                 .defineInRange("iceRayInterval", 160, 1, Integer.MAX_VALUE);
+        frostwaveInterval = BUILDER
+                .comment("Frostwave spell cooldown in ticks")
+                .defineInRange("frostwaveInterval", 240, 1, Integer.MAX_VALUE);
+        iceBlockInterval = BUILDER
+                .comment("Ice Block spell cooldown in ticks")
+                .defineInRange("iceBlockInterval", 300, 1, Integer.MAX_VALUE);
 
         BUILDER.pop();
 

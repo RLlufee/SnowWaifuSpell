@@ -81,3 +81,10 @@ type = "required"
 ordering = "NONE"
 side = "BOTH"
 
+[[dependencies."${mod_id}"]]
+modId = "irons_spellbooks"
+type = "required"
+versionRange = "[1.21.1-3.14.2,)"
+ordering = "AFTER"
+side = "BOTH"
+

@@ -5,8 +5,10 @@ import com.rinko1231.SnowWaifuSpell.ai.NewHoverBeamGoal;
 import com.rinko1231.SnowWaifuSpell.ai.NewSitWhenOrderedToGoal;
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
 import com.rinko1231.SnowWaifuSpell.init.ModEntityRegistry;
+import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.capabilities.magic.MagicManager;
 import io.redspace.ironsspellbooks.capabilities.magic.SummonManager;
@@ -75,6 +77,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
 
     private int snowballCooldown = 0;
     private int iceRayCooldown = 0;
+    private int frostwaveCooldown = 0;
+    private int iceBlockCooldown = 0;
+    private final MagicData issMagicData = new MagicData(true);
 
     public SummonedSnowQueen(EntityType<? extends SummonedSnowQueen> type, Level level) {
         super(type, level);
@@ -172,6 +177,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
                         heldItem, player, Items.MILK_BUCKET.getDefaultInstance()
                 );
                 player.setItemInHand(hand, filled);
+                if (!level.isClientSide()) {
+                    this.level().broadcastEntityEvent(this, (byte) 7);
+                }
                 return InteractionResult.sidedSuccess(level.isClientSide());
             }
 
@@ -251,6 +259,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             // 喷雾冷却计时
             this.snowballCooldown = 0;
             this.iceRayCooldown = 0;
+            this.frostwaveCooldown = 0;
+            this.iceBlockCooldown = 0;
+            this.issMagicData.resetCastingState();
             this.setTarget(null);
             forceStopBreath();
             this.getNavigation().stop();
@@ -313,6 +324,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             forceStopBreath();
             snowballCooldown = 0;
             iceRayCooldown = 0;
+            frostwaveCooldown = 0;
+            iceBlockCooldown = 0;
+            issMagicData.resetCastingState();
             return;
         }
 
@@ -344,15 +358,29 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             // 喷雾期间：持续伤害
             doBreathAttack();
         } else {
-            // 冷却期：放雪球和冰射线
+            // 冷却期：放雪球、冰射线和 ISS 冰系技能
             if (snowballCooldown > 0) snowballCooldown--;
             if (iceRayCooldown > 0) iceRayCooldown--;
+            if (frostwaveCooldown > 0) frostwaveCooldown--;
+            if (iceBlockCooldown > 0) iceBlockCooldown--;
+
+            // Frostwave：近距离范围控制技能
+            if (frostwaveCooldown <= 0 && this.distanceToSqr(target) <= 64.0D) {
+                castIssSpell(SpellRegistry.FROSTWAVE_SPELL.get(), this.getQueenLevel());
+                frostwaveCooldown = SnowWaifuConfig.frostwaveInterval.get();
+            }
+
+            // Ice Block：远程目标型冰块技能
+            if (iceBlockCooldown <= 0 && this.hasLineOfSight(target)) {
+                castIceBlock(target);
+                iceBlockCooldown = SnowWaifuConfig.iceBlockInterval.get();
+            }
 
             // 冰锥术（原雪球）：冷却完成且具备视线时发射
             if (snowballCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castSnowball(target);
-                    snowballCooldown = SNOWBALL_INTERVAL;
+                    snowballCooldown = SnowWaifuConfig.icicleInterval.get();
                 }
             }
 
@@ -360,7 +388,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             if (iceRayCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castIceRay();
-                    iceRayCooldown = ICE_RAY_INTERVAL;
+                    iceRayCooldown = SnowWaifuConfig.iceRayInterval.get();
                 }
             }
         }
@@ -474,6 +502,26 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
 
     public void setBreathing(boolean flag) {
         this.getEntityData().set(BEAM_FLAG, flag);
+    }
+
+    private void castIssSpell(AbstractSpell spell, int level) {
+        if (this.level().isClientSide) {
+            return;
+        }
+
+        int safeLevel = Math.max(1, Math.min(level, spell.getMaxLevel()));
+        spell.onCast(this.level(), safeLevel, this, CastSource.MOB, this.issMagicData);
+    }
+
+    private void castIceBlock(LivingEntity target) {
+        if (target == null || !target.isAlive()) {
+            return;
+        }
+
+        this.lookAt(target, 90.0F, 90.0F);
+        this.setYRot(this.getYHeadRot());
+        this.yBodyRot = this.getYHeadRot();
+        castIssSpell(SpellRegistry.ICE_BLOCK_SPELL.get(), this.getQueenLevel());
     }
 
     public void castSnowball(Entity target) {
