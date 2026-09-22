@@ -72,8 +72,10 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     private static final EntityDataAccessor<Boolean> BEAM_FLAG;
     private static final EntityDataAccessor<Integer> QUEEN_LEVEL =
             SynchedEntityData.defineId(SummonedSnowQueen.class, EntityDataSerializers.INT);
-    private static final int SNOWBALL_INTERVAL = SnowWaifuConfig.icicleInterval.get(); // 2 秒
-    private static final int ICE_RAY_INTERVAL = SnowWaifuConfig.iceRayInterval.get(); // 8 秒
+
+    // 注意：技能间隔/持续时间一律在使用点实时读取 SnowWaifuConfig，
+    // 不要缓存进 static final 字段——类加载期配置尚未加载会抛 IllegalStateException，
+    // 且会把数值永久冻结，导致玩家改配置必须重启游戏才生效。
 
     static {
         BEAM_FLAG = SynchedEntityData.defineId(SummonedSnowQueen.class, EntityDataSerializers.BOOLEAN);
@@ -174,6 +176,9 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
                         heldItem, player, Items.MILK_BUCKET.getDefaultInstance()
                 );
                 player.setItemInHand(hand, filled);
+                if (!level.isClientSide()) {
+                    this.level().broadcastEntityEvent(this, (byte) 7);
+                }
                 return InteractionResult.sidedSuccess(level.isClientSide());
             }
 
@@ -290,10 +295,6 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     }
 
 
-    // 常量定义
-    private static final int BREATH_DURATION = SnowWaifuConfig.breathConeDuration.get(); // 3秒
-    private static final int BREATH_COOLDOWN = SnowWaifuConfig.breathConeInterval.get();
-
     // 状态计数
     private int breathPhaseTimer = 0;
     private boolean isBreathingPhase = false;
@@ -335,9 +336,9 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
             isBreathingPhase = !isBreathingPhase;
             setBreathing(isBreathingPhase);
             if (isBreathingPhase) {
-                breathPhaseTimer = BREATH_DURATION; // 切换到开 → 持续喷雾
+                breathPhaseTimer = SnowWaifuConfig.breathConeDuration.get(); // 切换到开 → 持续喷雾
             } else {
-                breathPhaseTimer = BREATH_COOLDOWN; // 切换到关 → 冷却期
+                breathPhaseTimer = SnowWaifuConfig.breathConeInterval.get(); // 切换到关 → 冷却期
                 // 立刻清锥体
                 this.level().getEntitiesOfClass(
                         ConeOfColdProjectile.class,
@@ -374,7 +375,7 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
             if (snowballCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castSnowball(target);
-                    snowballCooldown = SNOWBALL_INTERVAL;
+                    snowballCooldown = SnowWaifuConfig.icicleInterval.get();
                 }
             }
 
@@ -382,7 +383,7 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
             if (iceRayCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castIceRay();
-                    iceRayCooldown = ICE_RAY_INTERVAL;
+                    iceRayCooldown = SnowWaifuConfig.iceRayInterval.get();
                 }
             }
         }
