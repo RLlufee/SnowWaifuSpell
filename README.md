@@ -1,4 +1,6 @@
-# Snow Waifu Spell
+# Snow Waifu Spell Resumed | 雪下的誓言·再续
+
+![](https://cdn.jsdelivr.net/gh/RLlufee/images@main/Assets/snow_wife.png)
 
 Have you ever felt a twinge of regret after defeating the **Snow Queen**—wishing she could accompany you, rather than becoming just another trophy head?  
 This mod introduces a new spell: **Snowbound Oath**.
