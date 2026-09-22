@@ -94,16 +94,15 @@ public class SummonSnowQueenSpell extends AbstractSpell {
 
 
             world.addFreshEntity(snowQueen);
-            if(!SnowWaifuConfig.snowWaifuForever.get())
-        {
-            snowQueen.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, 0, false, false, false));
-            int effectAmplifier = 0;
-            if (entity.hasEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get())) {
-                effectAmplifier += entity.getEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get()).getAmplifier() + 1;
-            }
+            if (!SnowWaifuConfig.isForever()) {
+                snowQueen.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, 0, false, false, false));
+                int effectAmplifier = 0;
+                if (entity.hasEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get())) {
+                    effectAmplifier += entity.getEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get()).getAmplifier() + 1;
+                }
 
-            entity.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, effectAmplifier, false, false, true));
-        }
+                entity.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, effectAmplifier, false, false, true));
+            }
 
 
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);

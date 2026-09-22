@@ -28,6 +28,7 @@ import io.redspace.ironsspellbooks.entity.spells.ray_of_frost.RayOfFrostVisualEn
 import io.redspace.ironsspellbooks.util.ParticleHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -277,6 +278,12 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     public void tick() {
         super.tick();
 
+        if (SnowWaifuConfig.isForever() && !this.level().isClientSide()) {
+            if (this.hasEffect(EffectRegistry.SNOW_WAIFU_TIMER.get())) {
+                this.removeEffect(EffectRegistry.SNOW_WAIFU_TIMER.get());
+            }
+        }
+
 
         if (this.deathTime > 0) {
             for (int i = 0; i < 5; ++i) {
@@ -437,7 +444,23 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         super.defineSynchedData();
         this.entityData.define(BEAM_FLAG, false);
         this.entityData.define(QUEEN_LEVEL, 1); // 默认1级
+    }
 
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("QueenLevel", this.getQueenLevel());
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains("QueenLevel")) {
+            this.setQueenLevel(tag.getInt("QueenLevel"));
+        }
+        if (SnowWaifuConfig.isForever()) {
+            this.removeEffect(EffectRegistry.SNOW_WAIFU_TIMER.get());
+        }
     }
 
     @Override
@@ -559,6 +582,9 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
     @Override
     public void onUnSummon() {
         if (!this.level().isClientSide) {
+            if (SnowWaifuConfig.isForever()) {
+                return;
+            }
             MagicManager.spawnParticles(this.level(), ParticleTypes.POOF,
                     this.getX(), this.getY(), this.getZ(),
                     25, 0.4, 0.8, 0.4, 0.03, false);
@@ -566,6 +592,15 @@ public class SummonedSnowQueen extends TamableMob implements MagicSummon {
         }
     }
 
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return !this.isTame() && !SnowWaifuConfig.isForever();
+    }
+
+    @Override
+    public boolean requiresCustomPersistence() {
+        return super.requiresCustomPersistence() || this.isTame() || SnowWaifuConfig.isForever();
+    }
 
     @Override
     public boolean shouldDespawnInPeaceful() {
