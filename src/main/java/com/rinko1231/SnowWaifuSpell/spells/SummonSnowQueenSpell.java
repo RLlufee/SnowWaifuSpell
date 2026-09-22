@@ -113,7 +113,7 @@ public class SummonSnowQueenSpell extends AbstractSpell {
             )).getCreature();
 
             world.addFreshEntity(creature);
-            if (!SnowWaifuConfig.snowWaifuForever.get()) {
+            if (!SnowWaifuConfig.isForever()) {
                 SummonManager.initSummon(entity, creature, summonTime, summonedEntitiesCastData);
 
                 RecastInstance recastInstance = new RecastInstance(

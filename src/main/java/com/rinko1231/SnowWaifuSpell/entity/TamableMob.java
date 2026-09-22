@@ -42,7 +42,7 @@ public abstract class TamableMob extends PathfinderMob implements OwnableEntity 
         if (this.getOwnerUUID() != null) {
             p_21819_.putUUID("Owner", this.getOwnerUUID());
         }
-
+        p_21819_.putBoolean("Sitting", this.orderedToSit);
     }
 
     public void readAdditionalSaveData(CompoundTag p_21815_) {
@@ -63,9 +63,20 @@ public abstract class TamableMob extends PathfinderMob implements OwnableEntity 
                 this.setTame(false);
             }
         }
-
-
+        this.orderedToSit = p_21815_.getBoolean("Sitting");
+        this.setInSittingPose(this.orderedToSit);
     }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return !this.isTame();
+    }
+
+    @Override
+    public boolean requiresCustomPersistence() {
+        return super.requiresCustomPersistence() || this.isTame();
+    }
+
     private boolean orderedToSit;
     public boolean canBeLeashed(Player player) {
         return !this.isLeashed();

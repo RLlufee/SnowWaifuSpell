@@ -1,6 +1,6 @@
 package com.rinko1231.SnowWaifuSpell.config;
 
-
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class SnowWaifuConfig {
@@ -27,6 +27,7 @@ public class SnowWaifuConfig {
     // ===== 持续时间参数（秒） =====
     public static ModConfigSpec.IntValue DURATION_A;
     public static ModConfigSpec.IntValue DURATION_B;
+    public static ModConfigSpec.IntValue summonDurationSeconds;
 
     public static ModConfigSpec.BooleanValue snowQueenLootDrop;
     public static ModConfigSpec.BooleanValue snowWaifuForever;
@@ -78,11 +79,17 @@ public class SnowWaifuConfig {
 
         // ===== 持续时间：y = a*x + b =====
         DURATION_A = BUILDER
-                .comment("Duration slope (a) in ticks for Duration = a*level + b")
+                .comment("Duration slope (a) in ticks for Duration = a*level + b (Legacy formula)")
                 .defineInRange("duration.a", 3000, -Integer.MAX_VALUE, Integer.MAX_VALUE);
         DURATION_B = BUILDER
-                .comment("Duration intercept (b) in ticks for Duration = a*level + b")
+                .comment("Duration intercept (b) in ticks for Duration = a*level + b (Legacy formula)")
                 .defineInRange("duration.b", 3000, -Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+        summonDurationSeconds = BUILDER
+                .comment("Summon duration in seconds for level 1. Subsequent levels increase duration by 50%.",
+                        "Set to <= 0 for permanent existence.",
+                        "Note: If 'Truly Best Friends Forever' (trulybestfriends) mod is installed, Snow Waifu automatically exists permanently regardless of this setting.")
+                .defineInRange("summonDurationSeconds", 300, -1, Integer.MAX_VALUE);
 
         snowQueenLootDrop = BUILDER
                 .comment("Should Snow Queen Boss Drop the Soul")
@@ -114,6 +121,15 @@ public class SnowWaifuConfig {
         SPEC = BUILDER.build();
     }
 
+    public static boolean isTrulyBestFriendsLoaded() {
+        return ModList.get().isLoaded("trulybestfriends");
+    }
+
+    public static boolean isForever() {
+        return (snowWaifuForever != null && snowWaifuForever.get())
+                || (summonDurationSeconds != null && summonDurationSeconds.get() <= 0)
+                || isTrulyBestFriendsLoaded();
+    }
 
     public static double getBaseHP(int level) {
         return BASE_HP_A.get() * level + BASE_HP_B.get();
@@ -132,6 +148,12 @@ public class SnowWaifuConfig {
     }
 
     public static int getDurationTicks(int level) {
+        if (isForever()) {
+            return -1;
+        }
+        if (summonDurationSeconds != null && summonDurationSeconds.get() > 0) {
+            return (int) (summonDurationSeconds.get() * 20L * (1.0 + (level - 1) * 0.5));
+        }
         return DURATION_A.get() * level + DURATION_B.get();
     }
 }
