@@ -11,7 +11,6 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
 import twilightforest.init.TFEntities;
@@ -25,13 +24,16 @@ public class SnowWaifuSpell {
         ModEntityRegistry.register(modEventBus);
         ModSpellRegistry.register(modEventBus);
         ModItemRegistry.ITEMS.register(modEventBus);
-        modContainer.registerConfig(ModConfig.Type.COMMON, SnowWaifuConfig.SPEC,"SnowWaifuSpellConfig.toml");
+        SnowWaifuConfig.register(modEventBus, modContainer);
         NeoForge.EVENT_BUS.register(this);
     }
 
     @SubscribeEvent
     public void onLootTableLoad(LootTableLoadEvent event) {
-        if (!SnowWaifuConfig.snowQueenLootDrop.get()) return;
+        // 战利品表只在世界加载时构建一次，因此该开关改动后需重载世界或重启游戏
+        if (!SnowWaifuConfig.settings().bossDropsSoul()) {
+            return;
+        }
         ResourceLocation name = event.getName();
         if (name.equals(TFEntities.SNOW_QUEEN.get().getDefaultLootTable().location())) {
             LootPool pool = LootPool.lootPool()

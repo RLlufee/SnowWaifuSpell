@@ -1,10 +1,12 @@
 package com.rinko1231.SnowWaifuSpell.spells;
 
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
+import com.rinko1231.SnowWaifuSpell.config.SnowWaifuSettings;
 import com.rinko1231.SnowWaifuSpell.entity.SummonedSnowQueen;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.events.SpellSummonEvent;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.capabilities.magic.*;
@@ -88,14 +90,13 @@ public class SummonSnowQueenSpell extends AbstractSpell {
         PlayerRecasts recasts = playerMagicData.getPlayerRecasts();
         if (!recasts.hasRecastForSpell(this)) {
             SummonedEntitiesCastData summonedEntitiesCastData = new SummonedEntitiesCastData();
+            SnowWaifuSettings settings = SnowWaifuConfig.settings();
 
-            // 根据等级设置存活时间
-            int summonTime;
-            float baseHP;
-
-            baseHP = (float) SnowWaifuConfig.getBaseHP(spellLevel);
-            summonTime = SnowWaifuConfig.getDurationTicks(spellLevel);
-
+            // 血量 = 配置的 1 级值 + 每级增量 × (等级 - 1)，再按配置决定是否叠加法术强度乘数
+            float maxHealth = (float) settings.health(spellLevel);
+            if (settings.healthScaleWithSpellPower() && hasSpellPowerAttribute(entity)) {
+                maxHealth *= this.getEntityPowerMultiplier(entity);
+            }
 
             SummonedSnowQueen snowQueen = new SummonedSnowQueen(world, entity);
             snowQueen.setPos(entity.position());
@@ -103,17 +104,22 @@ public class SummonSnowQueenSpell extends AbstractSpell {
             Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.ATTACK_DAMAGE))
                     .setBaseValue(getQueenDamage(spellLevel, entity));
             Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.MAX_HEALTH))
-                    .setBaseValue(baseHP * this.getEntityPowerMultiplier(entity));
+                    .setBaseValue(maxHealth);
             snowQueen.setHealth(snowQueen.getMaxHealth());
             Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
             Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
 
-            SummonedSnowQueen creature = (SummonedSnowQueen) ((SpellSummonEvent) NeoForge.EVENT_BUS.post(
-                    new SpellSummonEvent(entity, snowQueen, this.spellId, spellLevel)
-            )).getCreature();
+            // 用菱形推断让 K = SummonedSnowQueen，getCreature() 直接返回目标类型，无需强转。
+            // 原先写成原始类型 SpellSummonEvent 会触发 unchecked 警告。
+            SummonedSnowQueen creature = NeoForge.EVENT_BUS.post(
+                    new SpellSummonEvent<>(entity, snowQueen, this.spellId, spellLevel)
+            ).getCreature();
 
             world.addFreshEntity(creature);
-            if (!SnowWaifuConfig.isForever()) {
+
+            // 永久模式下不注册召唤计时器，也不进入 Recast 流程
+            if (!settings.permanent()) {
+                int summonTime = settings.durationTicks(spellLevel);
                 SummonManager.initSummon(entity, creature, summonTime, summonedEntitiesCastData);
 
                 RecastInstance recastInstance = new RecastInstance(
@@ -131,7 +137,23 @@ public class SummonSnowQueenSpell extends AbstractSpell {
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
     }
 
+    /**
+     * 施法者是否拥有 ISS 的法术强度属性。
+     *
+     * <p>{@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER 属性，
+     * 而原版 {@code AttributeSupplier} 在实体不支持该属性时会抛出 {@code IllegalArgumentException}，
+     * 因此非玩家施法者（例如部分模组生物）必须先做判断。
+     */
+    private static boolean hasSpellPowerAttribute(LivingEntity entity) {
+        // 1.21 起 getAttribute 接收 Holder<Attribute>，DeferredHolder 本身就是 Holder
+        return entity.getAttribute(AttributeRegistry.SPELL_POWER) != null;
+    }
+
     private float getQueenDamage(int spellLevel, LivingEntity caster) {
-        return this.getSpellPower(spellLevel, caster);
+        if (hasSpellPowerAttribute(caster)) {
+            return this.getSpellPower(spellLevel, caster);
+        }
+        // 没有法术强度属性时退化为不受加成的基准值，避免抛异常导致施法失败
+        return this.baseSpellPower + this.spellPowerPerLevel * (spellLevel - 1);
     }
 }

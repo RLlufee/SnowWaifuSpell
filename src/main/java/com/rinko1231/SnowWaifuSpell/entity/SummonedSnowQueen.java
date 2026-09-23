@@ -4,6 +4,7 @@ import com.rinko1231.SnowWaifuSpell.ai.FlyingFollowOwnerGoal;
 import com.rinko1231.SnowWaifuSpell.ai.NewHoverBeamGoal;
 import com.rinko1231.SnowWaifuSpell.ai.NewSitWhenOrderedToGoal;
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
+import com.rinko1231.SnowWaifuSpell.config.SnowWaifuSettings;
 import com.rinko1231.SnowWaifuSpell.init.ModEntityRegistry;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
@@ -67,8 +68,11 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
     private static final EntityDataAccessor<Boolean> BEAM_FLAG;
     private static final EntityDataAccessor<Integer> QUEEN_LEVEL =
             SynchedEntityData.defineId(SummonedSnowQueen.class, EntityDataSerializers.INT);
-    private static final int SNOWBALL_INTERVAL = SnowWaifuConfig.icicleInterval.get(); // 2 秒
-    private static final int ICE_RAY_INTERVAL = SnowWaifuConfig.iceRayInterval.get(); // 8 秒
+
+    // 注意：配置一律通过 SnowWaifuConfig.settings() 读取快照。
+    // 不要在 static final 字段里缓存配置数值——类加载期配置尚未加载会抛异常，
+    // 而且会把数值永久冻结，导致玩家改配置必须重启游戏才生效。
+    // 快照本身是加载/重载时整体替换的不可变对象，所以在方法内取一次存进局部变量复用是安全的。
 
     static {
         BEAM_FLAG = SynchedEntityData.defineId(SummonedSnowQueen.class, EntityDataSerializers.BOOLEAN);
@@ -297,10 +301,6 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
     }
 
 
-    // 常量定义
-    private static final int BREATH_DURATION = SnowWaifuConfig.breathConeDuration.get(); // 3秒
-    private static final int BREATH_COOLDOWN = SnowWaifuConfig.breathConeInterval.get();
-
     // 状态计数
     private int breathPhaseTimer = 0;
     private boolean isBreathingPhase = false;
@@ -331,6 +331,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             return;
         }
 
+        // 每刻取一次快照存进局部变量，避免在热路径上重复读取
+        SnowWaifuSettings settings = SnowWaifuConfig.settings();
+
         // 视线与朝向校准：在战斗期间持续面向目标，并同步身体朝向
         this.getLookControl().setLookAt(target, 60.0F, 60.0F);
         this.lookAt(target, 60.0F, 60.0F);
@@ -343,9 +346,9 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             isBreathingPhase = !isBreathingPhase;
             setBreathing(isBreathingPhase);
             if (isBreathingPhase) {
-                breathPhaseTimer = BREATH_DURATION; // 切换到开 → 持续喷雾
+                breathPhaseTimer = settings.breathCastTicks(); // 切换到开 → 持续喷雾
             } else {
-                breathPhaseTimer = BREATH_COOLDOWN; // 切换到关 → 冷却期
+                breathPhaseTimer = settings.breathRestTicks(); // 切换到关 → 冷却期
                 // 立刻清锥体
                 this.level().getEntitiesOfClass(
                         ConeOfColdProjectile.class,
@@ -368,20 +371,20 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             // Frostwave：近距离范围控制技能
             if (frostwaveCooldown <= 0 && this.distanceToSqr(target) <= 64.0D) {
                 castIssSpell(SpellRegistry.FROSTWAVE_SPELL.get(), this.getQueenLevel());
-                frostwaveCooldown = SnowWaifuConfig.frostwaveInterval.get();
+                frostwaveCooldown = settings.frostwaveTicks();
             }
 
             // Ice Block：远程目标型冰块技能
             if (iceBlockCooldown <= 0 && this.hasLineOfSight(target)) {
                 castIceBlock(target);
-                iceBlockCooldown = SnowWaifuConfig.iceBlockInterval.get();
+                iceBlockCooldown = settings.iceBlockTicks();
             }
 
             // 冰锥术（原雪球）：冷却完成且具备视线时发射
             if (snowballCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castSnowball(target);
-                    snowballCooldown = SnowWaifuConfig.icicleInterval.get();
+                    snowballCooldown = settings.icicleTicks();
                 }
             }
 
@@ -389,7 +392,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             if (iceRayCooldown <= 0) {
                 if (this.hasLineOfSight(target)) {
                     castIceRay();
-                    iceRayCooldown = SnowWaifuConfig.iceRayInterval.get();
+                    iceRayCooldown = settings.iceRayTicks();
                 }
             }
         }
@@ -491,7 +494,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
             cone.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
             cone.setXRot(this.getXRot());
             cone.setYRot(this.getYRot());
-            cone.setDamage(SnowWaifuConfig.getBreathDamage(this.getQueenLevel()));
+            cone.setDamage(SnowWaifuConfig.settings().breathDamage(this.getQueenLevel()));
             this.level().addFreshEntity(cone);
         }
     }
@@ -549,7 +552,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
 
         IcicleProjectile orb = new IcicleProjectile(level, this);
         orb.setOwner(this);
-        orb.setDamage((float) SnowWaifuConfig.getIcicleDamage(this.getQueenLevel()));
+        orb.setDamage((float) SnowWaifuConfig.settings().icicleDamage(this.getQueenLevel()));
         orb.setNoGravity(true);
 
         // 发射起点设为雪女眼睛下方 0.2 格处
@@ -570,7 +573,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
     @Override
     public void onUnSummon() {
         if (!this.level().isClientSide) {
-            if (SnowWaifuConfig.isForever()) {
+            if (SnowWaifuConfig.settings().permanent()) {
                 return;
             }
             MagicManager.spawnParticles(this.level(), ParticleTypes.POOF,
@@ -582,12 +585,12 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
 
     @Override
     public boolean removeWhenFarAway(double distanceToClosestPlayer) {
-        return !this.isTame() && !SnowWaifuConfig.isForever();
+        return !this.isTame() && !SnowWaifuConfig.settings().permanent();
     }
 
     @Override
     public boolean requiresCustomPersistence() {
-        return super.requiresCustomPersistence() || this.isTame() || SnowWaifuConfig.isForever();
+        return super.requiresCustomPersistence() || this.isTame() || SnowWaifuConfig.settings().permanent();
     }
 
     @Override
@@ -649,7 +652,7 @@ public class SummonedSnowQueen extends TamableMob implements IMagicSummon {
 
         // 范围与数值
         final float range = 30.0F;
-        final float damage = (float) SnowWaifuConfig.getRayDamage(queenLevel);
+        final float damage = (float) SnowWaifuConfig.settings().rayDamage(queenLevel);
         final int freezeTime = (int) (queenLevel * 10.0F); // ticks
 
         // 强行转向目标，保证身体朝向与射线完全一致
