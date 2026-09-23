@@ -74,7 +74,8 @@ public class SummonSnowQueenSpell extends AbstractSpell {
     }
 
     @Override
-    public void onRecastFinished(ServerPlayer serverPlayer, RecastInstance recastInstance, RecastResult recastResult, ICastDataSerializable castDataSerializable) {
+    public void onRecastFinished(ServerPlayer serverPlayer, RecastInstance recastInstance, RecastResult recastResult,
+            ICastDataSerializable castDataSerializable) {
         if (SummonManager.recastFinishedHelper(serverPlayer, recastInstance, recastResult, castDataSerializable)) {
             super.onRecastFinished(serverPlayer, recastInstance, recastResult, castDataSerializable);
         }
@@ -86,7 +87,8 @@ public class SummonSnowQueenSpell extends AbstractSpell {
     }
 
     @Override
-    public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
+    public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource,
+            MagicData playerMagicData) {
         PlayerRecasts recasts = playerMagicData.getPlayerRecasts();
         if (!recasts.hasRecastForSpell(this)) {
             SummonedEntitiesCastData summonedEntitiesCastData = new SummonedEntitiesCastData();
@@ -112,8 +114,7 @@ public class SummonSnowQueenSpell extends AbstractSpell {
             // 用菱形推断让 K = SummonedSnowQueen，getCreature() 直接返回目标类型，无需强转。
             // 原先写成原始类型 SpellSummonEvent 会触发 unchecked 警告。
             SummonedSnowQueen creature = NeoForge.EVENT_BUS.post(
-                    new SpellSummonEvent<>(entity, snowQueen, this.spellId, spellLevel)
-            ).getCreature();
+                    new SpellSummonEvent<>(entity, snowQueen, this.spellId, spellLevel)).getCreature();
 
             world.addFreshEntity(creature);
 
@@ -128,8 +129,7 @@ public class SummonSnowQueenSpell extends AbstractSpell {
                         this.getRecastCount(spellLevel, entity),
                         summonTime,
                         castSource,
-                        summonedEntitiesCastData
-                );
+                        summonedEntitiesCastData);
                 recasts.addRecast(recastInstance, playerMagicData);
             }
         }
@@ -140,7 +140,8 @@ public class SummonSnowQueenSpell extends AbstractSpell {
     /**
      * 施法者是否拥有 ISS 的法术强度属性。
      *
-     * <p>{@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER 属性，
+     * {@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER
+     * 属性，
      * 而原版 {@code AttributeSupplier} 在实体不支持该属性时会抛出 {@code IllegalArgumentException}，
      * 因此非玩家施法者（例如部分模组生物）必须先做判断。
      */

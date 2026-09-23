@@ -68,5 +68,10 @@
   "snowwaifuspell.configuration.cooldown.frostwave_ticks": "霜波冷却（tick）",
   "snowwaifuspell.configuration.cooldown.frostwave_ticks.tooltip": "霜波（Frostwave）多久可以放一次。20 tick = 1 秒，所以默认的 240 tick = 12 秒。",
   "snowwaifuspell.configuration.cooldown.ice_block_ticks": "冰封冷却（tick）",
-  "snowwaifuspell.configuration.cooldown.ice_block_ticks.tooltip": "冰封（Ice Block）多久可以放一次。20 tick = 1 秒，所以默认的 300 tick = 15 秒。"
+  "snowwaifuspell.configuration.cooldown.ice_block_ticks.tooltip": "冰封（Ice Block）多久可以放一次。20 tick = 1 秒，所以默认的 300 tick = 15 秒。",
+
+  "snowwaifuspell.configuration.mysterious_little_thing": "神秘小东西",
+  "snowwaifuspell.configuration.mysterious_little_thing.tooltip": "没什么好看的，真的。相信我没骗你哦",
+  "snowwaifuspell.configuration.mysterious_little_thing.snow_queen_bust": "为冰雪女王启用胸型",
+  "snowwaifuspell.configuration.mysterious_little_thing.snow_queen_bust.tooltip": "给冰雪女王加上胸型。纯外观，只在客户端生效，默认关闭。"
 }

@@ -68,5 +68,10 @@
   "snowwaifuspell.configuration.cooldown.frostwave_ticks": "Frostwave cooldown (ticks)",
   "snowwaifuspell.configuration.cooldown.frostwave_ticks.tooltip": "How often the Frostwave skill can fire. 20 ticks = 1 second, so the default 240 ticks = 12 seconds.",
   "snowwaifuspell.configuration.cooldown.ice_block_ticks": "Ice Block cooldown (ticks)",
-  "snowwaifuspell.configuration.cooldown.ice_block_ticks.tooltip": "How often the Ice Block skill can fire. 20 ticks = 1 second, so the default 300 ticks = 15 seconds."
+  "snowwaifuspell.configuration.cooldown.ice_block_ticks.tooltip": "How often the Ice Block skill can fire. 20 ticks = 1 second, so the default 300 ticks = 15 seconds.",
+
+  "snowwaifuspell.configuration.mysterious_little_thing": "Mysterious Little Thing",
+  "snowwaifuspell.configuration.mysterious_little_thing.tooltip": "Nothing to see here, really. Everything in this section is purely cosmetic and client-side only.",
+  "snowwaifuspell.configuration.mysterious_little_thing.snow_queen_bust": "Give the Snow Queen a bust",
+  "snowwaifuspell.configuration.mysterious_little_thing.snow_queen_bust.tooltip": "Adds a bust to the Snow Queen. Purely cosmetic, client-side only, off by default. Takes effect as soon as the config is reloaded - no restart needed."
 }

@@ -34,10 +34,13 @@ public class SummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> {
         makeSideCrown(crown, -1, -4, 10F, 0);
         makeSideCrown(crown, 0, 4, -10F, 1);
 
-        definition.addOrReplaceChild("body", CubeListBuilder.create()
+        var body = definition.addOrReplaceChild("body", CubeListBuilder.create()
                         .texOffs(32, 0)
                         .addBox(-4.0F, 0.0F, -2.0F, 8, 23, 4),
                 PartPose.ZERO);
+
+        // 躯干正面的胸型（挂在 body 下，随躯干一起动）
+        SnowWaifuParts.addBust(body);
 
         definition.addOrReplaceChild("right_arm", CubeListBuilder.create()
                         .texOffs(16, 16)
@@ -113,6 +116,9 @@ public class SummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> {
 
     @Override
     public void setupAnim(SummonedSnowQueen entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        // 胸型的显示与否由配置决定（默认关闭）。放在最前面，避免坐下分支提前 return 时漏掉。
+        SnowWaifuParts.syncVisibility(this.body);
+
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
         // 如果坐下，则强制坐姿
