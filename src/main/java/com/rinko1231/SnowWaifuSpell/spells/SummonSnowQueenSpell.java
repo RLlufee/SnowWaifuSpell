@@ -1,11 +1,13 @@
 package com.rinko1231.SnowWaifuSpell.spells;
 
 import com.rinko1231.SnowWaifuSpell.config.SnowWaifuConfig;
+import com.rinko1231.SnowWaifuSpell.config.SnowWaifuSettings;
 import com.rinko1231.SnowWaifuSpell.entity.SummonedSnowQueen;
 import com.rinko1231.SnowWaifuSpell.init.EffectRegistry;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 
 import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
 import io.redspace.ironsspellbooks.registries.MobEffectRegistry;
@@ -70,45 +72,63 @@ public class SummonSnowQueenSpell extends AbstractSpell {
 
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
+        SnowWaifuSettings settings = SnowWaifuConfig.settings();
 
+        // 血量 = 配置的 1 级值 + 每级增量 × (等级 - 1)，再按配置决定是否叠加法术强度乘数
+        float maxHealth = (float) settings.health(spellLevel);
+        if (settings.healthScaleWithSpellPower() && hasSpellPowerAttribute(entity)) {
+            maxHealth *= this.getEntityPowerMultiplier(entity);
+        }
 
-            // 根据等级设置存活时间
-            int summonTime;
-            float baseHP;
+        SummonedSnowQueen snowQueen = new SummonedSnowQueen(world, entity);
+        snowQueen.setPos(entity.position());
+        snowQueen.setQueenLevel(spellLevel);
+        Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.ATTACK_DAMAGE))
+                .setBaseValue(getQueenDamage(spellLevel, entity));
+        Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.MAX_HEALTH))
+                .setBaseValue(maxHealth);
+        snowQueen.setHealth(snowQueen.getMaxHealth());
+        Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
+        Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
 
-            baseHP = (float) SnowWaifuConfig.getBaseHP(spellLevel);
-            summonTime = SnowWaifuConfig.getDurationTicks(spellLevel);
+        world.addFreshEntity(snowQueen);
 
+        // 永久模式下不挂召唤计时器。durationTicks 在永久模式返回 -1，
+        // 若不加此判断就会把 -1 当成效果时长导致召唤物立即消失。
+        if (!settings.permanent()) {
+            int summonTime = settings.durationTicks(spellLevel);
+            MobEffect timer = (MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get();
 
-            SummonedSnowQueen snowQueen = new SummonedSnowQueen(world, entity);
-            snowQueen.setPos(entity.position());
-            snowQueen.setQueenLevel(spellLevel);
-            Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.ATTACK_DAMAGE))
-                    .setBaseValue(getQueenDamage(spellLevel, entity));
-            Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.MAX_HEALTH))
-                    .setBaseValue(baseHP * this.getEntityPowerMultiplier(entity));
-            snowQueen.setHealth(snowQueen.getMaxHealth());
-            Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
-            Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
+            snowQueen.addEffect(new MobEffectInstance(timer, summonTime, 0, false, false, false));
 
-
-
-            world.addFreshEntity(snowQueen);
-            if (!SnowWaifuConfig.isForever()) {
-                snowQueen.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, 0, false, false, false));
-                int effectAmplifier = 0;
-                if (entity.hasEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get())) {
-                    effectAmplifier += entity.getEffect((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get()).getAmplifier() + 1;
-                }
-
-                entity.addEffect(new MobEffectInstance((MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get(), summonTime, effectAmplifier, false, false, true));
+            // 效果等级 = 已有的召唤数量 + 1，供 ISS 的召唤物上限逻辑使用
+            int effectAmplifier = 0;
+            MobEffectInstance existing = entity.getEffect(timer);
+            if (existing != null) {
+                effectAmplifier = existing.getAmplifier() + 1;
             }
-
+            entity.addEffect(new MobEffectInstance(timer, summonTime, effectAmplifier, false, false, true));
+        }
 
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
     }
 
+    /**
+     * 施法者是否拥有 ISS 的法术强度属性。
+     *
+     * <p>{@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER 属性，
+     * 而原版 {@code AttributeSupplier} 在实体不支持该属性时会抛出 {@code IllegalArgumentException}，
+     * 因此非玩家施法者（例如部分模组生物）必须先做判断。
+     */
+    private static boolean hasSpellPowerAttribute(LivingEntity entity) {
+        return entity.getAttribute(AttributeRegistry.SPELL_POWER.get()) != null;
+    }
+
     private float getQueenDamage(int spellLevel, LivingEntity caster) {
-        return this.getSpellPower(spellLevel, caster);
+        if (hasSpellPowerAttribute(caster)) {
+            return this.getSpellPower(spellLevel, caster);
+        }
+        // 没有法术强度属性时退化为不受加成的基准值，避免抛异常导致施法失败
+        return this.baseSpellPower + this.spellPowerPerLevel * (spellLevel - 1);
     }
 }

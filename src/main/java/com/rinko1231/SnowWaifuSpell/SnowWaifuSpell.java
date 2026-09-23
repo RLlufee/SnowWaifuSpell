@@ -30,13 +30,16 @@ public class SnowWaifuSpell {
         ModSpellRegistry.register(modEventBus);
         ModItemRegistry.ITEMS.register(modEventBus);
         EffectRegistry.register(modEventBus);
-        SnowWaifuConfig.setup();
+        SnowWaifuConfig.register(modEventBus);
         MinecraftForge.EVENT_BUS.register(this);
     }
 
     @SubscribeEvent
     public void onLootTableLoad(LootTableLoadEvent event) {
-        if (!SnowWaifuConfig.snowQueenLootDrop.get()) return;
+        // 战利品表只在世界加载时构建一次，因此该开关改动后需重载世界或重启游戏
+        if (!SnowWaifuConfig.settings().bossDropsSoul()) {
+            return;
+        }
         ResourceLocation name = event.getName();
         if (name.equals(TFEntities.SNOW_QUEEN.get().getDefaultLootTable())) {
             LootPool pool = LootPool.lootPool()
