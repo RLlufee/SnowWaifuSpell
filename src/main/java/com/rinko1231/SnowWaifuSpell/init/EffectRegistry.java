@@ -24,5 +24,5 @@ public class EffectRegistry {
     static {
         MOB_EFFECT_DEFERRED_REGISTER = DeferredRegister.create(Registries.MOB_EFFECT, "snowwaifuspell");
         SNOW_WAIFU_TIMER = MOB_EFFECT_DEFERRED_REGISTER.register("snow_waifu_timer", () -> new SummonTimer(MobEffectCategory.BENEFICIAL, 12495141));
-       }
+    }
 }

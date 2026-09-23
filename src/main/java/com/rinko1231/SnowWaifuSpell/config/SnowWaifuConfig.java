@@ -23,10 +23,10 @@ import java.util.List;
 /**
  * 配置声明与注册。
  *
- * <p>本类只做四件事：<b>声明</b>、<b>注册</b>、<b>生成快照</b>、<b>迁移旧配置</b>。
+ * 本类只做四件事：声明</b>、注册</b>、生成快照</b>、迁移旧配置</b>。
  * 它不含任何游戏逻辑判断，业务代码一律通过 {@link #settings()} 读取配置。
  *
- * <p>配置类型为 {@code COMMON}，文件位于 {@code config/snowwaifuspell-common.toml}，
+ * 配置类型为 {@code COMMON}，文件位于 {@code config/snowwaifuspell-common.toml}，
  * 一份配置对所有存档生效。修改后需重载配置（部分项需重启）才会写入快照。
  */
 public final class SnowWaifuConfig {
@@ -62,6 +62,8 @@ public final class SnowWaifuConfig {
     private static final ForgeConfigSpec.IntValue SPEC_ICE_RAY_TICKS;
     private static final ForgeConfigSpec.IntValue SPEC_FROSTWAVE_TICKS;
     private static final ForgeConfigSpec.IntValue SPEC_ICE_BLOCK_TICKS;
+    /** 「神秘小东西」分组：外观开关 */
+    private static final ForgeConfigSpec.BooleanValue SPEC_SNOW_QUEEN_BUST;
 
     /** Forge 配置规格 */
     private static final ForgeConfigSpec SPEC;
@@ -73,8 +75,9 @@ public final class SnowWaifuConfig {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
 
         // ===== 关于注释与翻译键的写法（Forge / NeoForge 通用规则）=====
-        //   comment(...)     写在 push() 之前 → 成为该「分区」的注释；写在 define(...) 之前 → 成为该「条目」的注释。
-        //   translation(...) 写在 push() 之前 → 成为该「分区标题」的翻译键；写在 define(...) 之前 → 成为该「条目」的翻译键。
+        // comment(...) 写在 push() 之前 → 成为该「分区」的注释；写在 define(...) 之前 → 成为该「条目」的注释。
+        // translation(...) 写在 push() 之前 → 成为该「分区标题」的翻译键；写在 define(...) 之前 →
+        // 成为该「条目」的翻译键。
         // 条目与分区的翻译键统一为 snowwaifuspell.configuration.<路径>，文案见
         // assets/snowwaifuspell/lang/en_us.json 与 zh_cn.json；配置界面会按玩家语言显示。
         // TOML 内的注释固定为「英文 + 中文」双语，方便直接编辑配置文件的玩家。
@@ -230,6 +233,28 @@ public final class SnowWaifuConfig {
                 .defineInRange("ice_block_ticks", 300, 1, Integer.MAX_VALUE);
         b.pop();
 
+        // ===== 神秘小东西 =====
+        b.comment(
+                "Mysterious little things. Nothing to see here.",
+                "Everything in this section is purely cosmetic and only affects the client.",
+                "---",
+                "神秘小东西。没什么好看的。",
+                "本分组下的内容全部只影响外观，且只在客户端生效。");
+        b.translation("snowwaifuspell.configuration.mysterious_little_thing");
+        b.push("mysterious_little_thing");
+
+        SPEC_SNOW_QUEEN_BUST = b
+                .comment("Whether the Snow Queen gets a bust.",
+                        "Off by default. Purely cosmetic.",
+                        "Takes effect as soon as the config is reloaded - no restart needed.",
+                        "---",
+                        "冰雪女王是否拥有胸型。",
+                        "默认关闭。纯外观。",
+                        "重载配置即刻生效，不需要重启游戏。")
+                .translation("snowwaifuspell.configuration.mysterious_little_thing.snow_queen_bust")
+                .define("snow_queen_bust", false);
+        b.pop();
+
         SPEC = b.build();
     }
 
@@ -243,7 +268,7 @@ public final class SnowWaifuConfig {
     /**
      * 取得当前配置快照。业务代码读取配置的唯一入口。
      *
-     * <p>正常情况下 {@link ModConfigEvent.Loading} 已经把快照填好；若在配置加载前被调用，
+     * 正常情况下 {@link ModConfigEvent.Loading} 已经把快照填好；若在配置加载前被调用，
      * 会立即尝试读取并抛出 Forge 的明确异常（早失败优于静默使用错误数值）。
      */
     public static SnowWaifuSettings settings() {
@@ -305,8 +330,8 @@ public final class SnowWaifuConfig {
                 SPEC_ICICLE_TICKS.get(),
                 SPEC_ICE_RAY_TICKS.get(),
                 SPEC_FROSTWAVE_TICKS.get(),
-                SPEC_ICE_BLOCK_TICKS.get()
-        );
+                SPEC_ICE_BLOCK_TICKS.get(),
+                SPEC_SNOW_QUEEN_BUST.get());
     }
 
     private static boolean isFriendsModLoaded() {
@@ -343,14 +368,16 @@ public final class SnowWaifuConfig {
     /**
      * 把旧版 {@code SnowWaifuSpellConfig.toml} 的数值迁移到新版配置文件。
      *
-     * <p>只在新配置不存在、且旧配置存在时执行一次。旧文件不会被删除或改名，
+     * 只在新配置不存在、且旧配置存在时执行一次。旧文件不会被删除或改名，
      * 因此删掉新配置后仍可重新迁移。
      *
-     * <p>换算关系（旧式为 {@code 值 = a × 等级 + b}，新式为 {@code level1 + perLevel × (等级 - 1)}）：
-     * <pre>
-     *     level1   = a + b
-     *     perLevel = a
-     * </pre>
+     * 换算关系（旧式为 {@code 值 = a × 等级 + b}，新式为 {@code level1 + perLevel × (等级 - 1)}）：
+     * 
+     * 
+     * level1 = a + b
+     * perLevel = a
+     * 
+     * 
      * 二者对任意等级完全等价。旧版 {@code duration.a} / {@code duration.b} 在原实现中不可达，
      * 属于死配置，因此不做迁移。
      */

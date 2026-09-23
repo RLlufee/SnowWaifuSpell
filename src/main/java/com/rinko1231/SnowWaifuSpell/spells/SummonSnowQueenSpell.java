@@ -20,7 +20,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 
-
 import java.util.Objects;
 import java.util.Optional;
 
@@ -69,9 +68,9 @@ public class SummonSnowQueenSpell extends AbstractSpell {
         return false;
     }
 
-
     @Override
-    public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
+    public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource,
+            MagicData playerMagicData) {
         SnowWaifuSettings settings = SnowWaifuConfig.settings();
 
         // 血量 = 配置的 1 级值 + 每级增量 × (等级 - 1)，再按配置决定是否叠加法术强度乘数
@@ -116,7 +115,8 @@ public class SummonSnowQueenSpell extends AbstractSpell {
     /**
      * 施法者是否拥有 ISS 的法术强度属性。
      *
-     * <p>{@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER 属性，
+     * {@code getEntityPowerMultiplier} 与 {@code getSpellPower} 内部都会读取 SPELL_POWER
+     * 属性，
      * 而原版 {@code AttributeSupplier} 在实体不支持该属性时会抛出 {@code IllegalArgumentException}，
      * 因此非玩家施法者（例如部分模组生物）必须先做判断。
      */

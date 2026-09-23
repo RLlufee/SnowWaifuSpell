@@ -23,22 +23,20 @@ import static com.rinko1231.SnowWaifuSpell.SnowWaifuSpell.MOD_ID;
 public class ModClientEvents {
     public static final ModelLayerLocation NEW_SNOW_WAIFU_LAYER = new ModelLayerLocation(
             new ResourceLocation(MOD_ID, "snow_waifu"),
-            "main"
-    );
+            "main");
 
     public static final ModelLayerLocation SNOW_WAIFU_LAYER = new ModelLayerLocation(
             new ResourceLocation(MOD_ID, "new_snow_waifu"),
-            "main"
-    );
+            "main");
 
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         BooleanSupplier jappa = JappaPackReloadListener.INSTANCE.uncachedJappaPackCheck();
-       event.registerEntityRenderer(ModEntityRegistry.SUMMONED_SNOW_QUEEN.get(),
-               (m) ->
-                       !jappa.getAsBoolean() ?
-                               new SummonedSnowQueenRenderer(m, new SummonedSnowQueenModel(m.bakeLayer(SNOW_WAIFU_LAYER))) :
-                               new NewSummonedSnowQueenRenderer(m, new NewSummonedSnowQueenModel(m.bakeLayer(NEW_SNOW_WAIFU_LAYER))));
+        event.registerEntityRenderer(ModEntityRegistry.SUMMONED_SNOW_QUEEN.get(),
+                (m) -> !jappa.getAsBoolean()
+                        ? new SummonedSnowQueenRenderer(m, new SummonedSnowQueenModel(m.bakeLayer(SNOW_WAIFU_LAYER)))
+                        : new NewSummonedSnowQueenRenderer(m,
+                                new NewSummonedSnowQueenModel(m.bakeLayer(NEW_SNOW_WAIFU_LAYER))));
 
     }
 

@@ -23,7 +23,9 @@ public class NewSummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> 
     public static LayerDefinition create() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
-        partdefinition.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 16).addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F).texOffs(32, 45).addBox(-4.5F, 10.0F, -2.5F, 9.0F, 14.0F, 5.0F), PartPose.ZERO);
+        PartDefinition body = partdefinition.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 16).addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F).texOffs(32, 45).addBox(-4.5F, 10.0F, -2.5F, 9.0F, 14.0F, 5.0F), PartPose.ZERO);
+        // 躯干正面的胸型（挂在 body 下，随躯干一起动）
+        SnowWaifuParts.addBust(body);
         PartDefinition head = partdefinition.addOrReplaceChild("head", CubeListBuilder.create().texOffs(0, 0).addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F), PartPose.ZERO);
         partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(14, 32).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F), PartPose.offset(5.0F, 2.0F, 0.0F));
         partdefinition.addOrReplaceChild("left_leg", CubeListBuilder.create().texOffs(16, 48).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(1.9F, 12.0F, 0.0F));
@@ -42,6 +44,9 @@ public class NewSummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> 
 
     @Override
     public void setupAnim(SummonedSnowQueen entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        // 胸型的显示与否由配置决定（默认关闭）。放在最前面，避免坐下分支提前 return 时漏掉。
+        SnowWaifuParts.syncVisibility(this.body);
+
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
         // 如果坐下，则强制坐姿
