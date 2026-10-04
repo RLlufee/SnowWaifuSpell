@@ -5,23 +5,35 @@ import com.rinko1231.SnowWaifuSpell.config.SnowWaifuSettings;
 import com.rinko1231.SnowWaifuSpell.entity.SummonedSnowQueen;
 import com.rinko1231.SnowWaifuSpell.init.EffectRegistry;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
-
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.AttributeRegistry;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
-import io.redspace.ironsspellbooks.registries.MobEffectRegistry;
+import io.redspace.ironsspellbooks.api.util.Utils;
+import io.redspace.ironsspellbooks.capabilities.magic.MultiTargetEntityCastData;
+import io.redspace.ironsspellbooks.capabilities.magic.PlayerRecasts;
+import io.redspace.ironsspellbooks.capabilities.magic.RecastInstance;
+import io.redspace.ironsspellbooks.capabilities.magic.RecastResult;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
+import javax.annotation.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.rinko1231.SnowWaifuSpell.SnowWaifuSpell.MOD_ID;
 
@@ -64,6 +76,42 @@ public class SummonSnowQueenSpell extends AbstractSpell {
         return Optional.of(SoundEvents.EVOKER_PREPARE_SUMMON);
     }
 
+    @Override
+    public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
+        SnowWaifuSettings settings = SnowWaifuConfig.settings();
+        float maxHealth = (float) settings.health(spellLevel);
+        if (settings.healthScaleWithSpellPower() && hasSpellPowerAttribute(caster)) {
+            maxHealth *= this.getEntityPowerMultiplier(caster);
+        }
+        return List.of(
+                Component.translatable("ui.irons_spellbooks.hp", Utils.stringTruncation(maxHealth, 1)),
+                Component.translatable("ui.irons_spellbooks.damage",
+                        Utils.stringTruncation(this.getQueenDamage(spellLevel, caster), 1)));
+    }
+
+    @Override
+    public int getRecastCount(int spellLevel, @Nullable LivingEntity entity) {
+        return 2;
+    }
+
+    @Override
+    public void onRecastFinished(ServerPlayer serverPlayer, RecastInstance recastInstance, RecastResult recastResult,
+            ICastDataSerializable castDataSerializable) {
+        if (recastResult == RecastResult.COUNTERSPELL) {
+            MagicData.getPlayerMagicData(serverPlayer).getPlayerRecasts().forceAddRecast(recastInstance);
+            return;
+        }
+        if (recastResult != RecastResult.TIMEOUT && castDataSerializable instanceof MultiTargetEntityCastData castData) {
+            removeSummons(serverPlayer, castData);
+        }
+        super.onRecastFinished(serverPlayer, recastInstance, recastResult, castDataSerializable);
+    }
+
+    @Override
+    public ICastDataSerializable getEmptyCastData() {
+        return new MultiTargetEntityCastData();
+    }
+
     public boolean allowLooting() {
         return false;
     }
@@ -71,45 +119,71 @@ public class SummonSnowQueenSpell extends AbstractSpell {
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource,
             MagicData playerMagicData) {
-        SnowWaifuSettings settings = SnowWaifuConfig.settings();
+        PlayerRecasts recasts = playerMagicData.getPlayerRecasts();
+        if (!recasts.hasRecastForSpell(this)) {
+            SnowWaifuSettings settings = SnowWaifuConfig.settings();
 
-        // 血量 = 配置的 1 级值 + 每级增量 × (等级 - 1)，再按配置决定是否叠加法术强度乘数
-        float maxHealth = (float) settings.health(spellLevel);
-        if (settings.healthScaleWithSpellPower() && hasSpellPowerAttribute(entity)) {
-            maxHealth *= this.getEntityPowerMultiplier(entity);
-        }
-
-        SummonedSnowQueen snowQueen = new SummonedSnowQueen(world, entity);
-        snowQueen.setPos(entity.position());
-        snowQueen.setQueenLevel(spellLevel);
-        Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.ATTACK_DAMAGE))
-                .setBaseValue(getQueenDamage(spellLevel, entity));
-        Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.MAX_HEALTH))
-                .setBaseValue(maxHealth);
-        snowQueen.setHealth(snowQueen.getMaxHealth());
-        Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
-        Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
-
-        world.addFreshEntity(snowQueen);
-
-        // 永久模式下不挂召唤计时器。durationTicks 在永久模式返回 -1，
-        // 若不加此判断就会把 -1 当成效果时长导致召唤物立即消失。
-        if (!settings.permanent()) {
-            int summonTime = settings.durationTicks(spellLevel);
-            MobEffect timer = (MobEffect) EffectRegistry.SNOW_WAIFU_TIMER.get();
-
-            snowQueen.addEffect(new MobEffectInstance(timer, summonTime, 0, false, false, false));
-
-            // 效果等级 = 已有的召唤数量 + 1，供 ISS 的召唤物上限逻辑使用
-            int effectAmplifier = 0;
-            MobEffectInstance existing = entity.getEffect(timer);
-            if (existing != null) {
-                effectAmplifier = existing.getAmplifier() + 1;
+            // 血量 = 配置的 1 级值 + 每级增量 × (等级 - 1)，再按配置决定是否叠加法术强度乘数
+            float maxHealth = (float) settings.health(spellLevel);
+            if (settings.healthScaleWithSpellPower() && hasSpellPowerAttribute(entity)) {
+                maxHealth *= this.getEntityPowerMultiplier(entity);
             }
-            entity.addEffect(new MobEffectInstance(timer, summonTime, effectAmplifier, false, false, true));
+
+            SummonedSnowQueen snowQueen = new SummonedSnowQueen(world, entity);
+            snowQueen.setPos(entity.position());
+            snowQueen.setQueenLevel(spellLevel);
+            Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.ATTACK_DAMAGE))
+                    .setBaseValue(getQueenDamage(spellLevel, entity));
+            Objects.requireNonNull(snowQueen.getAttributes().getInstance(Attributes.MAX_HEALTH))
+                    .setBaseValue(maxHealth);
+            snowQueen.setHealth(snowQueen.getMaxHealth());
+            Objects.requireNonNull(snowQueen.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(1.2D);
+            Objects.requireNonNull(snowQueen.getAttribute(Attributes.FLYING_SPEED)).setBaseValue(1.2D);
+
+            world.addFreshEntity(snowQueen);
+
+            if (!settings.permanent()) {
+                int summonTime = settings.durationTicks(spellLevel);
+                MobEffect timer = EffectRegistry.SNOW_WAIFU_TIMER.get();
+                snowQueen.addEffect(new MobEffectInstance(timer, summonTime, 0, false, false, false));
+
+                int effectAmplifier = 0;
+                MobEffectInstance existing = entity.getEffect(timer);
+                if (existing != null) {
+                    effectAmplifier = existing.getAmplifier() + 1;
+                }
+                entity.addEffect(new MobEffectInstance(timer, summonTime, effectAmplifier, false, false, true));
+
+                MultiTargetEntityCastData castData = new MultiTargetEntityCastData(snowQueen);
+
+                RecastInstance recastInstance = new RecastInstance(
+                        this.getSpellId(),
+                        spellLevel,
+                        this.getRecastCount(spellLevel, entity),
+                        summonTime,
+                        castSource,
+                        castData);
+                recasts.addRecast(recastInstance, playerMagicData);
+            }
         }
 
         super.onCast(world, spellLevel, entity, castSource, playerMagicData);
+    }
+
+    private void removeSummons(ServerPlayer serverPlayer, MultiTargetEntityCastData castData) {
+        MinecraftServer server = serverPlayer.getServer();
+        if (server == null) {
+            return;
+        }
+        for (UUID summonUuid : castData.getTargets()) {
+            for (ServerLevel level : server.getAllLevels()) {
+                Entity summon = level.getEntity(summonUuid);
+                if (summon instanceof SummonedSnowQueen snowQueen) {
+                    snowQueen.onUnSummon();
+                    break;
+                }
+            }
+        }
     }
 
     /**
