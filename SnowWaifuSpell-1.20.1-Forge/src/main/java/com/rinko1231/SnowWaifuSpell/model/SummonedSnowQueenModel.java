@@ -81,12 +81,14 @@ public class SummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> {
         crownSide.addOrReplaceChild("spike_3l", CubeListBuilder.create()
                 .texOffs(52, 28)
                 .addBox(-0.5F, -2.5F, spikeDepth, 1, 3, 1),
-                PartPose.offsetAndRotation(-2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F, -10F / 180F * Mth.PI));
+                PartPose.offsetAndRotation(-2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F,
+                        -10F / 180F * Mth.PI));
 
         crownSide.addOrReplaceChild("spike_3r", CubeListBuilder.create()
                 .texOffs(52, 28)
                 .addBox(-0.5F, -2.5F, spikeDepth, 1, 3, 1),
-                PartPose.offsetAndRotation(2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F, 10F / 180F * Mth.PI));
+                PartPose.offsetAndRotation(2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F,
+                        10F / 180F * Mth.PI));
 
     }
 
@@ -106,12 +108,14 @@ public class SummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> {
         crownFront.addOrReplaceChild("spike_3l", CubeListBuilder.create()
                 .texOffs(52, 28)
                 .addBox(-0.5F, -2.5F, spikeDepth, 1, 3, 1),
-                PartPose.offsetAndRotation(-2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F, -10F / 180F * 3.14159F));
+                PartPose.offsetAndRotation(-2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F,
+                        -10F / 180F * 3.14159F));
 
         crownFront.addOrReplaceChild("spike_3r", CubeListBuilder.create()
                 .texOffs(52, 28)
                 .addBox(-0.5F, -2.5F, spikeDepth, 1, 3, 1),
-                PartPose.offsetAndRotation(2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F, 10F / 180F * 3.14159F));
+                PartPose.offsetAndRotation(2.5F, 0.0F, 0.0F, angle / 180F * Mth.PI, 0.0F,
+                        10F / 180F * 3.14159F));
 
     }
 
@@ -156,7 +160,8 @@ public class SummonedSnowQueenModel extends HumanoidModel<SummonedSnowQueen> {
         // 如果站立且处于喷冰状态
         if (entity.isBreathing()) {
             float f6 = Mth.sin(this.attackTime * (float) Math.PI);
-            float f7 = Mth.sin((1.0F - (1.0F - this.attackTime) * (1.0F - this.attackTime)) * (float) Math.PI);
+            float f7 = Mth.sin(
+                    (1.0F - (1.0F - this.attackTime) * (1.0F - this.attackTime)) * (float) Math.PI);
             this.rightArm.zRot = 0.0F;
             this.leftArm.zRot = 0.0F;
             this.rightArm.yRot = -(0.1F - f6 * 0.6F);

@@ -8,11 +8,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.resources.ResourceLocation;
-import twilightforest.TwilightForestMod;
 
 public class NewSummonedSnowQueenRenderer extends HumanoidMobRenderer<SummonedSnowQueen, NewSummonedSnowQueenModel> {
 
-    private static final ResourceLocation textureLoc = TwilightForestMod.getModelTexture("snowqueen.png");
+    private static final ResourceLocation textureLoc = new ResourceLocation(
+            "snowwaifuspell", "textures/entity/snowqueen_jappa_compat.png");
 
     public NewSummonedSnowQueenRenderer(EntityRendererProvider.Context manager, NewSummonedSnowQueenModel model) {
         super(manager, model, 0.625F);
