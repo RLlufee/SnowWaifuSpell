@@ -1,0 +1,6 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "snowwaifuspell:item/snow_queen_soul"
+  }
+}
